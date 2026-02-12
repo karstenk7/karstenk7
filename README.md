@@ -1,6 +1,6 @@
 ## Hi there 👋
 
-###UChicago Master's in Data Science Student
+### UChicago Master's in Data Science Student
 **Focus:** Homelabbing * Bayesian Inference * Data Scarpping Pipeline Using Debian Hosted Architecutre 
 --- 
 ## Systems and Engineering: 
