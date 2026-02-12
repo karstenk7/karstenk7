@@ -1,5 +1,15 @@
 ## Hi there 👋
 
+###UChicago Master's in Data Science Student
+**Focus:** Homelabbing * Bayesian Inference * Data Scarpping Pipeline Using Debian Hosted Architecutre 
+--- 
+## Systems and Engineering: 
+* **Languages:** Rust, Python(Pandas), C++, SQL, Java, JavaScript, HTML, CSS
+* **Tooling:** Docker, Linux Kernel tuning,
+
+## Projects: 
+* **Homelab-ops:** Building a self-hosted architecture using 2017 mac running Debian server configurations for self hosting efforts and local data sourcing for research
+
 <!--
 **karstenk7/karstenk7** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
