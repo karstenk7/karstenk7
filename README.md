@@ -1,7 +1,7 @@
 ## Hi there 👋
 
 ### UChicago Master's in Data Science Student
-**Focus:** Homelabbing * Bayesian Inference * Data Scarpping Pipeline Using Debian Hosted Architecutre 
+**Focus:** Homelabbing * Bayesian Inference * Data Scrapping Pipeline Using Debian Hosted Architecutre 
 --- 
 ## Systems and Engineering: 
 * **Languages:** Rust, Python(Pandas), C++, SQL, Java, JavaScript, HTML, CSS
