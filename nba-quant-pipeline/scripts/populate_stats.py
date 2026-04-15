@@ -1,91 +1,124 @@
-from nba_api.stats.endpoints import leaguedashteamstats, leaguedashplayerstats, teamestimatedmetrics
-import psycopg2
-import os
+"""Populate current-season team and player stats into PostgreSQL."""
+
+from __future__ import annotations
+
+import sys
 import time
 from datetime import date
-from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
-conn = psycopg2.connect(os.getenv("DATABASE_URL"))
-cur = conn.cursor()
+from nba_api.stats.endpoints import (
+    leaguedashplayerstats,
+    leaguedashteamstats,
+    teamestimatedmetrics,
+)
+
+from data_pipeline.config import get_settings
+from data_pipeline.db.insert_games import get_connection
 
 SEASON = "2024-25"
 
-def populate_team_stats():
+TEAM_STATS_SQL = """
+INSERT INTO team_stats (
+    team_name, game_date, season,
+    wins, losses, win_pct,
+    pts_per_game, plus_minus,
+    fg3a, fg3_pct,
+    off_rating, def_rating, net_rating, pace
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+ON CONFLICT (team_name, game_date) DO UPDATE SET
+    wins = EXCLUDED.wins,
+    losses = EXCLUDED.losses,
+    net_rating = EXCLUDED.net_rating,
+    pace = EXCLUDED.pace
+"""
+
+PLAYER_STATS_SQL = """
+INSERT INTO player_stats (
+    player_name, team_name, game_date, season,
+    pts_per_game, reb_per_game, ast_per_game,
+    minutes_per_game, plus_minus, fg3_pct
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+ON CONFLICT (player_name, game_date) DO UPDATE SET
+    pts_per_game = EXCLUDED.pts_per_game,
+    minutes_per_game = EXCLUDED.minutes_per_game,
+    plus_minus = EXCLUDED.plus_minus
+"""
+
+
+def populate_team_stats(conn) -> int:
     print("Fetching team stats...")
     time.sleep(1)
 
-    basic = leaguedashteamstats.LeagueDashTeamStats(
-        season=SEASON
-    ).get_data_frames()[0]
-
+    basic = leaguedashteamstats.LeagueDashTeamStats(season=SEASON).get_data_frames()[0]
     time.sleep(1)
-    advanced = teamestimatedmetrics.TeamEstimatedMetrics(
-        season=SEASON
-    ).get_data_frames()[0]
+    advanced = teamestimatedmetrics.TeamEstimatedMetrics(season=SEASON).get_data_frames()[0]
 
-    # Merge on team name
-    merged = basic.merge(advanced[['TEAM_NAME', 'E_OFF_RATING', 'E_DEF_RATING', 'E_NET_RATING', 'E_PACE']], on='TEAM_NAME')
+    merged = basic.merge(
+        advanced[["TEAM_NAME", "E_OFF_RATING", "E_DEF_RATING", "E_NET_RATING", "E_PACE"]],
+        on="TEAM_NAME",
+    )
 
-    for _, row in merged.iterrows():
-        cur.execute("""
-            INSERT INTO team_stats (
-                team_name, game_date, season,
-                wins, losses, win_pct,
-                pts_per_game, plus_minus,
-                fg3a, fg3_pct,
-                off_rating, def_rating, net_rating, pace
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (team_name, game_date) DO UPDATE SET
-                wins = EXCLUDED.wins,
-                losses = EXCLUDED.losses,
-                net_rating = EXCLUDED.net_rating,
-                pace = EXCLUDED.pace
-        """, (
-            row['TEAM_NAME'], date.today(), SEASON,
-            row['W'], row['L'], row['W_PCT'],
-            row['PTS'], row['PLUS_MINUS'],
-            row['FG3A'], row['FG3_PCT'],
-            row['E_OFF_RATING'], row['E_DEF_RATING'],
-            row['E_NET_RATING'], row['E_PACE']
-        ))
+    today = date.today()
+    records = [
+        (
+            row["TEAM_NAME"], today, SEASON,
+            row["W"], row["L"], row["W_PCT"],
+            row["PTS"], row["PLUS_MINUS"],
+            row["FG3A"], row["FG3_PCT"],
+            row["E_OFF_RATING"], row["E_DEF_RATING"],
+            row["E_NET_RATING"], row["E_PACE"],
+        )
+        for _, row in merged.iterrows()
+    ]
 
-    conn.commit()
-    print(f"Inserted {len(merged)} team records")
+    with conn.cursor() as cur:
+        cur.executemany(TEAM_STATS_SQL, records)
+        conn.commit()
 
-def populate_player_stats():
+    print(f"Inserted {len(records)} team records")
+    return len(records)
+
+
+def populate_player_stats(conn) -> int:
     print("Fetching player stats...")
     time.sleep(1)
 
-    stats = leaguedashplayerstats.LeagueDashPlayerStats(
-        season=SEASON
-    ).get_data_frames()[0]
+    stats = leaguedashplayerstats.LeagueDashPlayerStats(season=SEASON).get_data_frames()[0]
+    today = date.today()
 
-    for _, row in stats.iterrows():
-        cur.execute("""
-            INSERT INTO player_stats (
-                player_name, team_name, game_date, season,
-                pts_per_game, reb_per_game, ast_per_game,
-                minutes_per_game, plus_minus, fg3_pct
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (player_name, game_date) DO UPDATE SET
-                pts_per_game = EXCLUDED.pts_per_game,
-                minutes_per_game = EXCLUDED.minutes_per_game,
-                plus_minus = EXCLUDED.plus_minus
-        """, (
-            row['PLAYER_NAME'], row['TEAM_ABBREVIATION'],
-            date.today(), SEASON,
-            row['PTS'], row['REB'], row['AST'],
-            row['MIN'], row['PLUS_MINUS'], row['FG3_PCT']
-        ))
+    records = [
+        (
+            row["PLAYER_NAME"], row["TEAM_ABBREVIATION"],
+            today, SEASON,
+            row["PTS"], row["REB"], row["AST"],
+            row["MIN"], row["PLUS_MINUS"], row["FG3_PCT"],
+        )
+        for _, row in stats.iterrows()
+    ]
 
-    conn.commit()
-    print(f"Inserted {len(stats)} player records")
+    with conn.cursor() as cur:
+        cur.executemany(PLAYER_STATS_SQL, records)
+        conn.commit()
+
+    print(f"Inserted {len(records)} player records")
+    return len(records)
+
+
+def main() -> None:
+    settings = get_settings()
+    conn = get_connection(settings)
+    try:
+        populate_team_stats(conn)
+        populate_player_stats(conn)
+        print("Done.")
+    finally:
+        conn.close()
+
 
 if __name__ == "__main__":
-    populate_team_stats()
-    populate_player_stats()
-    cur.close()
-    conn.close()
-    print("Done.")
+    main()
