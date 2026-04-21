@@ -1,26 +1,52 @@
-## Hi there 👋
+# Karsten Kropp
 
-### UChicago Master's in Data Science Student
-**Focus:** Homelabbing * Bayesian Inference * Data Scrapping Pipeline Using Debian Hosted Architecutre 
---- 
-## Systems and Engineering: 
-* **Languages:** Rust, Python(Pandas), C++, SQL, Java, JavaScript, HTML, CSS
-* **Tooling:** Docker, Linux Kernel tuning,
+M.S. Data Science @ University of Chicago
 
-## Projects: 
-* **Homelab-ops:** Building a self-hosted architecture using 2017 mac running Debian server configurations for self hosting efforts and local data sourcing for research
+Building data systems and models that run end-to-end — from ingestion to evaluation.
 
-<!--
-**karstenk7/karstenk7** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+---
 
-Here are some ideas to get you started:
+## nfl-quant-pipeline
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+**Rust · PostgreSQL · Python**
+
+A data pipeline for collecting and analyzing sports betting market data.
+
+- Async Rust scraper ingests live odds on a fixed interval and stores them as time-series snapshots  
+- PostgreSQL schema designed for tracking line movement across sportsbooks  
+- Historical game data backfilled for modeling and evaluation  
+- Pipeline run tracking and validation scripts for monitoring data quality  
+
+**Current focus:**
+- Reliable odds ingestion and game mapping  
+- Feature generation from line movement and market behavior  
+- Preparing for backtesting and model development  
+
+---
+
+## Notes
+
+This repo reflects ongoing work on:
+- data pipeline design (Rust + async systems)  
+- relational storage and query patterns  
+- building clean datasets for downstream modeling  
+
+Related work includes building a database engine from scratch and experimenting with forecasting models, but those are separate projects.
+
+---
+
+## Stack
+
+- Rust
+- Python
+- SQL  
+- PostgreSQL  
+- Debian Linux  
+- Tokio  
+
+---
+
+## Contact
+
+- karstrich@gmail.com
+- https://www.linkedin.com/in/karsten-kropp-49024a24a/
