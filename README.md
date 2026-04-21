@@ -38,8 +38,11 @@ Related work includes building a database engine from scratch and experimenting 
 ## Stack
 
 - Rust
-- Python
+- Python (Pandas, scikit-learn, numpy, etc)
 - SQL  
+- C++ 
+- Docker 
+- React
 - PostgreSQL  
 - Debian Linux  
 - Tokio  
