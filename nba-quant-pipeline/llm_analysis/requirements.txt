@@ -1,0 +1,22 @@
+# Dependencies for the LLM analysis layer.
+# Install: pip install -r llm_analysis/requirements.txt
+#
+# These are ADDITIVE — they do not conflict with the base pipeline's
+# requirements.txt (psycopg2-binary, python-dotenv are already installed).
+
+# --- Already in base requirements (listed for clarity, won't reinstall) ---
+psycopg2-binary>=2.9
+python-dotenv>=1.0
+
+# --- LLM backend (choose one or both) ---
+openai>=1.0
+# transformers>=4.36    # uncomment for local HuggingFace models
+# torch>=2.1            # uncomment for local HuggingFace models
+# accelerate>=0.25      # uncomment for device_map="auto"
+
+# --- RAG / embeddings ---
+sentence-transformers>=2.2
+faiss-cpu>=1.7
+
+# --- Utilities ---
+numpy>=1.24
