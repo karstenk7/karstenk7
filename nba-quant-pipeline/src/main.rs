@@ -82,47 +82,48 @@ impl Config {
 
 // ---------------------------------------------------------------------------
 // Team name → abbreviation lookup
+//
+// Loaded from the `teams` table (keyed by league) rather than hardcoded, so
+// NBA and NFL share one code path and one source of truth for team data.
 // ---------------------------------------------------------------------------
 
-fn build_team_lookup() -> HashMap<&'static str, &'static str> {
-    HashMap::from([
-        ("Atlanta Hawks", "ATL"),
-        ("Boston Celtics", "BOS"),
-        ("Brooklyn Nets", "BKN"),
-        ("Charlotte Hornets", "CHA"),
-        ("Chicago Bulls", "CHI"),
-        ("Cleveland Cavaliers", "CLE"),
-        ("Dallas Mavericks", "DAL"),
-        ("Denver Nuggets", "DEN"),
-        ("Detroit Pistons", "DET"),
-        ("Golden State Warriors", "GSW"),
-        ("Houston Rockets", "HOU"),
-        ("Indiana Pacers", "IND"),
-        ("Los Angeles Clippers", "LAC"),
-        ("LA Clippers", "LAC"),
-        ("Los Angeles Lakers", "LAL"),
-        ("LA Lakers", "LAL"),
-        ("Memphis Grizzlies", "MEM"),
-        ("Miami Heat", "MIA"),
-        ("Milwaukee Bucks", "MIL"),
-        ("Minnesota Timberwolves", "MIN"),
-        ("New Orleans Pelicans", "NOP"),
-        ("New York Knicks", "NYK"),
-        ("Oklahoma City Thunder", "OKC"),
-        ("Orlando Magic", "ORL"),
-        ("Philadelphia 76ers", "PHI"),
-        ("Phoenix Suns", "PHX"),
-        ("Portland Trail Blazers", "POR"),
-        ("Sacramento Kings", "SAC"),
-        ("San Antonio Spurs", "SAS"),
-        ("Toronto Raptors", "TOR"),
-        ("Utah Jazz", "UTA"),
-        ("Washington Wizards", "WAS"),
-    ])
+/// Derives the `teams.league` value from an Odds API sport key, e.g.
+/// "basketball_nba" -> "nba", "americanfootball_nfl" -> "nfl".
+fn league_from_sport(sport: &str) -> &str {
+    sport.rsplit('_').next().unwrap_or(sport)
 }
 
-fn resolve_team<'a>(full_name: &str, lookup: &'a HashMap<&str, &str>) -> Option<&'a str> {
-    lookup.get(full_name).copied()
+/// Odds API team-name variants that don't match `teams.full_name` exactly.
+fn team_name_aliases(league: &str) -> Vec<(&'static str, &'static str)> {
+    match league {
+        "nba" => vec![("LA Clippers", "LAC"), ("LA Lakers", "LAL")],
+        "nfl" => vec![("LA Chargers", "LAC"), ("LA Rams", "LAR")],
+        _ => vec![],
+    }
+}
+
+async fn build_team_lookup(db: &Client, league: &str) -> Result<HashMap<String, String>> {
+    let rows = db
+        .query(
+            "SELECT full_name, abbreviation FROM teams WHERE league = $1",
+            &[&league],
+        )
+        .await?;
+
+    let mut lookup: HashMap<String, String> = rows
+        .into_iter()
+        .map(|row| (row.get::<_, String>(0), row.get::<_, String>(1)))
+        .collect();
+
+    for (alias, abbr) in team_name_aliases(league) {
+        lookup.insert(alias.to_string(), abbr.to_string());
+    }
+
+    Ok(lookup)
+}
+
+fn resolve_team<'a>(full_name: &str, lookup: &'a HashMap<String, String>) -> Option<&'a str> {
+    lookup.get(full_name).map(|s| s.as_str())
 }
 
 // ---------------------------------------------------------------------------
@@ -309,7 +310,7 @@ async fn fetch_and_store_odds(
     http: &reqwest::Client,
     db: &Client,
     config: &Config,
-    team_lookup: &HashMap<&str, &str>,
+    team_lookup: &HashMap<String, String>,
 ) -> Result<ScrapeStats> {
     let url = config.api_url();
     tracing::info!("Fetching {} odds...", config.sport);
@@ -476,7 +477,9 @@ async fn main() -> Result<()> {
     let config = Config::from_env();
     let http = reqwest::Client::new();
     let db = connect_db().await?;
-    let team_lookup = build_team_lookup();
+    let league = league_from_sport(&config.sport).to_string();
+    let team_lookup = build_team_lookup(&db, &league).await?;
+    tracing::info!("Loaded {} team names for league={}", team_lookup.len(), league);
 
     tracing::info!(
         "Starting odds scraper: sport={}, poll_interval={}s, dedup_window={}s",

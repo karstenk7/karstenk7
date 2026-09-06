@@ -8,7 +8,7 @@ import psycopg2
 
 from data_pipeline.config import Settings
 
-InsertRecord = Tuple[str, str, object, str, str, int, int, bool, int, int]
+InsertRecord = Tuple[str, str, object, str, str, int, int, bool, int, int, str]
 
 INSERT_SQL = """
 INSERT INTO historical_games (
@@ -21,8 +21,9 @@ INSERT INTO historical_games (
     away_score,
     home_win,
     actual_spread,
-    actual_total
-) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    actual_total,
+    league
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (game_id) DO NOTHING
 """
 

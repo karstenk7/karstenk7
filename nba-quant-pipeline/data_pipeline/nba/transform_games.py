@@ -17,6 +17,7 @@ DB_COLUMNS = [
     "home_win",
     "actual_spread",
     "actual_total",
+    "league",
 ]
 
 _REQUIRED_SOURCE_COLUMNS = {"GAME_ID", "MATCHUP", "GAME_DATE", "TEAM_ABBREVIATION", "PTS"}
@@ -84,6 +85,7 @@ def transform_games(raw_games: pd.DataFrame, season: str) -> pd.DataFrame:
     cleaned["actual_spread"] = cleaned["home_score"] - cleaned["away_score"]
     cleaned["actual_total"] = cleaned["home_score"] + cleaned["away_score"]
     cleaned["season"] = season
+    cleaned["league"] = "nba"
 
     final = cleaned.rename(columns={"GAME_ID": "game_id"})[DB_COLUMNS]
     final = final.drop_duplicates(subset=["game_id"], keep="first").sort_values("game_date")
