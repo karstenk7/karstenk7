@@ -153,6 +153,7 @@ async fn connect_db() -> Result<Client> {
 
 async fn resolve_historical_game_id(
     db: &Client,
+    league: &str,
     home_abbr: &str,
     away_abbr: &str,
     commence: &DateTime<FixedOffset>,
@@ -162,8 +163,8 @@ async fn resolve_historical_game_id(
     let rows = db
         .query(
             "SELECT game_id FROM historical_games \
-             WHERE home_team = $1 AND away_team = $2 AND game_date = $3",
-            &[&home_abbr, &away_abbr, &game_date],
+             WHERE league = $1 AND home_team = $2 AND away_team = $3 AND game_date = $4",
+            &[&league, &home_abbr, &away_abbr, &game_date],
         )
         .await
         .ok()?;
@@ -188,9 +189,9 @@ async fn resolve_historical_game_id(
     let rows = db
         .query(
             "SELECT game_id, game_date FROM historical_games \
-             WHERE home_team = $1 AND away_team = $2 \
-             AND game_date BETWEEN $3 AND $4",
-            &[&home_abbr, &away_abbr, &day_before, &day_after],
+             WHERE league = $1 AND home_team = $2 AND away_team = $3 \
+             AND game_date BETWEEN $4 AND $5",
+            &[&league, &home_abbr, &away_abbr, &day_before, &day_after],
         )
         .await
         .ok()?;
@@ -310,6 +311,7 @@ async fn fetch_and_store_odds(
     http: &reqwest::Client,
     db: &Client,
     config: &Config,
+    league: &str,
     team_lookup: &HashMap<String, String>,
 ) -> Result<ScrapeStats> {
     let url = config.api_url();
@@ -377,7 +379,7 @@ async fn fetch_and_store_odds(
         };
 
         let hist_id: Option<String> =
-            resolve_historical_game_id(db, home_abbr, away_abbr, &commence).await;
+            resolve_historical_game_id(db, league, home_abbr, away_abbr, &commence).await;
 
         for book in &game.bookmakers {
             for market in &book.markets {
@@ -418,8 +420,8 @@ async fn fetch_and_store_odds(
                             "INSERT INTO odds_snapshots \
                              (game_id, commence_time, home_team, away_team, bookmaker, \
                               market_type, outcome_name, price, point, captured_at, \
-                              sport, historical_game_id) \
-                             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
+                              sport, historical_game_id, league) \
+                             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)",
                             &[
                                 &game.id,
                                 &commence,
@@ -433,6 +435,7 @@ async fn fetch_and_store_odds(
                                 &batch_time,
                                 &config.sport,
                                 &hist_id,
+                                &league,
                             ],
                         )
                         .await
@@ -492,7 +495,7 @@ async fn main() -> Result<()> {
         let job_name = format!("odds_scraper_{}", config.sport);
         let run_id = start_run(&db, &job_name).await;
 
-        match fetch_and_store_odds(&http, &db, &config, &team_lookup).await {
+        match fetch_and_store_odds(&http, &db, &config, &league, &team_lookup).await {
             Ok(stats) => {
                 tracing::info!(
                     "Cycle complete: games={} inserted={} deduped={} skipped_teams={} skipped_validation={}",

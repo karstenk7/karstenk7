@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 
 
 def load_historical_games(cfg: Optional[ResearchConfig] = None) -> pd.DataFrame:
-    return read_sql(HISTORICAL_GAMES, cfg)
+    cfg = cfg or ResearchConfig()
+    return read_sql(HISTORICAL_GAMES, cfg, params={"league": cfg.league})
 
 
 def build_targets(games: pd.DataFrame) -> pd.DataFrame:

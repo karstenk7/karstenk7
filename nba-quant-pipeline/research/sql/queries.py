@@ -17,6 +17,7 @@ SELECT
     actual_spread,
     actual_total
 FROM historical_games
+WHERE league = %(league)s
 ORDER BY game_date, game_id
 """
 
@@ -68,6 +69,7 @@ WITH ranked AS (
         ) AS rn
     FROM odds_snapshots os
     WHERE os.historical_game_id IS NOT NULL
+      AND os.league = %(league)s
       AND os.captured_at <= os.commence_time
 )
 SELECT
@@ -103,6 +105,7 @@ WITH ranked AS (
         ) AS rn
     FROM odds_snapshots os
     WHERE os.historical_game_id IS NOT NULL
+      AND os.league = %(league)s
 )
 SELECT
     historical_game_id,

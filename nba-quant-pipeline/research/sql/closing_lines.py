@@ -24,11 +24,13 @@ def american_to_implied_prob(price: float) -> float:
 
 
 def _load_closing_lines(cfg: Optional[ResearchConfig] = None) -> pd.DataFrame:
-    return read_sql(CLOSING_LINES, cfg)
+    cfg = cfg or ResearchConfig()
+    return read_sql(CLOSING_LINES, cfg, params={"league": cfg.league})
 
 
 def _load_opening_lines(cfg: Optional[ResearchConfig] = None) -> pd.DataFrame:
-    return read_sql(OPENING_LINES, cfg)
+    cfg = cfg or ResearchConfig()
+    return read_sql(OPENING_LINES, cfg, params={"league": cfg.league})
 
 
 def _pivot_market(
